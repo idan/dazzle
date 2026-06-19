@@ -3,7 +3,18 @@
     "allow": [
       "WebFetch(domain:docs.waveshare.com)",
       "Bash(cargo build *)",
-      "WebFetch(domain:docs.espressif.com)"
+      "WebFetch(domain:docs.espressif.com)",
+      "WebFetch(domain:www.improv-wifi.com)",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:apps.apple.com)",
+      "WebFetch(domain:esp32.com)",
+      "WebFetch(domain:lib.rs)",
+      "WebFetch(domain:stevetech.me)",
+      "WebFetch(domain:captivebehavior.wballiance.com)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/esp-rs/esp-hal/main/esp-bootloader-esp-idf/src/partitions.rs\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/*)",
+      "Bash(curl -s \"https://crates.io/api/v1/crates/*)",
+      "Bash(cargo clippy *)"
     ]
   }
 }

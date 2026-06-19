@@ -11,7 +11,7 @@ path = "./src/bin/main.rs"
 [dependencies]
 esp-hal = { version = "~1.1.0", features = ["esp32c6", "log-04", "unstable"] }
 
-esp-rtos = { version = "0.3.0", features = ["embassy", "esp32c6", "log-04"] }
+esp-rtos = { version = "0.3.0", features = ["embassy", "esp32c6", "log-04", "esp-radio"] }
 
 esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32c6", "log-04"] }
 log                    = "0.4.27"
@@ -26,8 +26,28 @@ static_cell      = "2.1.1"
 # HUB75 LED matrix driver — DMA out via the ESP32-C6 PARL_IO peripheral, draws via embedded-graphics
 esp-hub75         = { version = "0.11.0", features = ["esp32c6", "log"] }
 embedded-graphics = "0.8.2"
-embassy-sync      = "0.8.0"
+# NOTE: pinned to 0.7 (not 0.8) to match trouble-host 0.6 and its gatt_server macro.
+# esp-radio pulls its own embassy-sync 0.8 internally; the two coexist as separate versions.
+embassy-sync      = "0.7"
+embassy-futures   = "0.1"
 heapless          = "0.9.2"
+
+# Wi-Fi/BLE radio (no_std) + heap it requires + the trouBLE host stack for the Improv GATT service.
+# `coex` is required because provisioning connects Wi-Fi while the BLE link is still up (to report
+# status to the Improv client). Works on Android/Windows/Linux Chrome; macOS Chrome has a known
+# esp-radio <-> CoreBluetooth interop issue (see docs/wifi-onboarding.md).
+esp-radio    = { version = "1.0.0-beta.0", features = ["esp32c6", "wifi", "ble", "coex", "log-04", "unstable"] }
+esp-alloc    = "0.10"
+trouble-host = { version = "0.6.0", features = ["default-packet-pool-mtu-255", "derive", "scan"] }
+
+# Persistent Wi-Fi credentials: sequential-storage (CRC + power-fail safe) over esp-storage's raw
+# flash, reusing the `nvs` partition range. BlockingAsync adapts esp-storage's blocking flash.
+esp-storage          = { version = "0.9", features = ["esp32c6"] }
+sequential-storage   = "7"
+embassy-embedded-hal = "0.5"
+
+# IP stack for the Wi-Fi station (DHCP to confirm a working connection + obtain the IP).
+embassy-net = { version = "0.8.0", features = ["dhcpv4", "medium-ethernet", "tcp", "dns"] }
 
 
 # For fine tuning these settings, please refer to https://doc.rust-lang.org/cargo/reference/profiles.html

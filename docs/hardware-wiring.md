@@ -63,7 +63,7 @@ example used GPIO10/GPIO11, which this board does **not** expose).
 | G2 | bottom-half green | GPIO23 | J3 |
 | B2 | bottom-half blue | GPIO15 | J3 |
 | A | addr0 | GPIO2 | J1 |
-| B | addr1 | GPIO8 | J1 |
+| B | addr1 | GPIO14 | J1 |
 | C | addr2 | GPIO1 | J1 |
 | **D** | addr3 (**pin 12, silk "GND"**) | GPIO0 | J1 |
 | E | addr4 | GPIO3 | J1 |
@@ -82,9 +82,13 @@ clean split for ribbon routing.
 - **GPIO10 and GPIO11 are not broken out** on the DevKitM-1 — don't use them.
 - **Avoid** GPIO16/GPIO17 (UART to the USB bridge), GPIO12/GPIO13 (USB-JTAG D-/D+),
   and GPIO9 (BOOT strapping) — using them breaks flashing or the serial monitor.
-- GPIO8 and GPIO15 are strapping pins but are safe here, since they're only used as
-  outputs *after* boot.
-- Spare broken-out pins if you need them: **GPIO4, GPIO14, GPIO18**.
+- **GPIO8 drives the onboard addressable RGB LED.** Originally we used it for `B`, which
+  made the LED light up bright/white from the address-line toggling. `B` was moved to
+  **GPIO14**, and firmware holds GPIO8 low so the LED stays dark. Don't use GPIO8 for a
+  HUB75 signal unless you want a glowing onboard LED. (GPIO8 is also a strapping pin.)
+- GPIO15 is a strapping pin but is safe here, since it's only used as an output *after* boot.
+- Spare broken-out pins if you need them: **GPIO4, GPIO18** (and GPIO8 if you don't mind
+  the onboard LED).
 
 ## Power
 
