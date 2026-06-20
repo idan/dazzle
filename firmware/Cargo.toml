@@ -28,6 +28,9 @@ embassy-time     = "0.5.1"
 cyw43     = "0.7.0"
 cyw43-pio = "0.10.0"
 
+# IP stack for the Wi-Fi station (DHCP to confirm a working connection + obtain the IP).
+embassy-net = { version = "0.9.1", features = ["dhcpv4", "medium-ethernet"] }
+
 # USB-serial logging: one USB cable carries both flashing (BOOTSEL UF2) and `log` output — no
 # debug probe. Keeps the `log::info!` API the ESP firmware used (no defmt). See docs/pico-port.md.
 embassy-usb        = "0.6.0"
