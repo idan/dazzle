@@ -159,9 +159,10 @@ plan.
    USB-serial. Builds clean for `thumbv8m.main-none-eabihf`; `picotool` produces a valid
    `rp2350-arm-s` UF2. **Next physical step: flash it and confirm logs appear over the one USB
    cable** — proves the no-probe dev loop before anything else is built on it.
-1. **Baseline radio** — bring up cyw43 (port the embassy `blinky_wifi.rs` pattern: PIO0, PINs
-   23/24/25/29, DMA_CH0/1, the three Wi-Fi firmware blobs) and blink the onboard LED via
-   `control.gpio_set(0, …)`. Confirms the cyw43 chip + firmware blobs talk.
+1. **Baseline radio** ✅ *(done — commit ce103c6)* — cyw43 up over PIO0-SPI (PINs 23/24/25/29,
+   DMA_CH0), Wi-Fi firmware blob uploaded, onboard LED blinking via `control.gpio_set(0, …)`.
+   Verified on hardware. cyw43-firmware/ blobs vendored (incl. the BT fw for M2). Confirms the
+   radio chip + firmware blobs + PIO-SPI link all work.
 2. **Spike Risk 2** — Wi-Fi join while a BLE central holds the GATT link; verify notifications
    survive. Test macOS Chrome here too. Decide on the provisioning-flow fallback if needed.
 3. **Spike Risk 1** — minimal PIO+DMA HUB75 driver lighting the 64×64 panel with a test pattern
