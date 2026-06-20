@@ -1,46 +1,30 @@
 //! pixel64 — RP2350 / Pico 2 W.
 //!
-//! Bring-up milestone 2b: BLE peripheral on the cyw43 radio via trouble-host. Proves the BLE
-//! controller swap (esp-radio BleConnector → cyw43 BtDriver, both behind bt-hci's
-//! ExternalController) independently of the Improv logic. Advertises as `pixel64` with a battery
-//! service — connect with a BLE scanner (nRF Connect / LightBlue) to verify. Wi-Fi join (M2a) is
-//! intentionally dropped here to isolate BLE; M2c brings both back together with the Improv port
-//! and the concurrency test. See docs/pico-port.md.
+//! Bring-up milestone 2c: Improv-over-BLE Wi-Fi provisioning on the cyw43 radio — the concurrency
+//! spike. Brings up cyw43 (Wi-Fi + BT) and the embassy-net stack, then runs Improv setup: advertise
+//! the Improv GATT as `pixel64`, accept a browser, and join Wi-Fi **while the BLE link is up**,
+//! reporting status + the device IP back over BLE. Provision from Chrome / https://improv-wifi.com
+//! (Android works; macOS is the open question this milestone re-tests). Persistence is stubbed here
+//! — storage is M4. See docs/pico-port.md.
 
 #![no_std]
 #![no_main]
-// trouble's #[gatt_service] macro expands to code with redundant borrows on each characteristic.
-#![allow(clippy::needless_borrows_for_generic_args)]
 
 use cyw43_pio::{PioSpi, RM2_CLOCK_DIVIDER};
 use embassy_executor::Spawner;
-use embassy_futures::select::{select, Either};
+use embassy_net::{Config as NetConfig, Runner as NetRunner, StackResources};
 use embassy_rp::bind_interrupts;
+use embassy_rp::clocks::RoscRng;
 use embassy_rp::dma::{Channel, InterruptHandler as DmaInterruptHandler};
 use embassy_rp::gpio::{Level, Output};
 use embassy_rp::peripherals::{DMA_CH0, PIO0, USB};
 use embassy_rp::pio::{InterruptHandler as PioInterruptHandler, Pio};
 use embassy_rp::usb::{Driver, InterruptHandler as UsbInterruptHandler};
-use log::{info, warn};
+use embassy_time::Timer;
+use log::info;
 use static_cell::StaticCell;
-use trouble_host::prelude::*;
 
-const DEVICE_NAME: &str = "pixel64";
-const CONNECTIONS_MAX: usize = 1;
-const L2CAP_CHANNELS_MAX: usize = 2;
-
-/// Minimal GATT server: a standard Battery Service so the device shows up recognizably in a BLE
-/// scanner. (M2c replaces this with the Improv service.)
-#[gatt_server]
-struct Server {
-    battery: BatteryService,
-}
-
-#[gatt_service(uuid = "0000180f-0000-1000-8000-00805f9b34fb")]
-struct BatteryService {
-    #[characteristic(uuid = "00002a19-0000-1000-8000-00805f9b34fb", read, notify)]
-    level: u8,
-}
+use pixel64::improv;
 
 // Program metadata for `picotool info`. The embassy-rp `binary-info` feature emits the RP2350 boot
 // image-def block (.start_block) on its own, so no manual `ImageDef` is needed.
@@ -76,6 +60,12 @@ async fn logger_task(driver: Driver<'static, USB>) {
 async fn cyw43_task(
     runner: cyw43::Runner<'static, cyw43::SpiBus<Output<'static>, PioSpi<'static, PIO0, 0>>>,
 ) -> ! {
+    runner.run().await
+}
+
+/// Drives the embassy-net IP stack (DHCP, etc.). Runs forever.
+#[embassy_executor::task]
+async fn net_task(mut runner: NetRunner<'static, cyw43::NetDriver<'static>>) -> ! {
     runner.run().await
 }
 
@@ -118,98 +108,36 @@ async fn main(spawner: Spawner) {
 
     static STATE: StaticCell<cyw43::State> = StaticCell::new();
     let state = STATE.init(cyw43::State::new());
-    // new_with_bluetooth: same runner drives Wi-Fi + BT; bt_device is the bt-hci transport.
-    let (_net_device, bt_device, mut control, runner) =
+    // new_with_bluetooth: same runner drives Wi-Fi + BT. control = Wi-Fi/LED; bt_device = BLE.
+    let (net_device, bt_device, mut control, runner) =
         cyw43::new_with_bluetooth(state, pwr, spi, fw, btfw, nvram).await;
     spawner.spawn(cyw43_task(runner).unwrap());
     control.init(clm).await;
-    info!("pixel64: cyw43 up — starting BLE peripheral");
+    info!("pixel64: cyw43 up");
 
-    run_ble(bt_device).await
-}
+    // IP stack (DHCP) over the cyw43 network device — ready for the join during provisioning.
+    let seed = RoscRng.next_u64();
+    static RESOURCES: StaticCell<StackResources<4>> = StaticCell::new();
+    let (stack, net_runner) = embassy_net::new(
+        net_device,
+        NetConfig::dhcpv4(Default::default()),
+        RESOURCES.init(StackResources::new()),
+        seed,
+    );
+    spawner.spawn(net_task(net_runner).unwrap());
 
-/// Bring up the trouble-host stack on cyw43's BT transport and serve the GATT peripheral forever.
-async fn run_ble(bt_device: cyw43::bluetooth::BtDriver<'static>) -> ! {
-    let controller: ExternalController<_, 1> = ExternalController::new(bt_device);
-    let address = Address::random([0xf0, 0x64, 0x1a, 0x05, 0x8f, 0xff]);
-    let mut resources: HostResources<DefaultPacketPool, CONNECTIONS_MAX, L2CAP_CHANNELS_MAX> =
-        HostResources::new();
-    let stack = trouble_host::new(controller, &mut resources).set_random_address(address);
-    let Host {
-        mut peripheral,
-        mut runner,
-        ..
-    } = stack.build();
+    // Improv setup: advertise over BLE, provision from a browser, join Wi-Fi while the BLE link is
+    // up, and come back with the assigned IP.
+    info!("pixel64: entering Improv setup — provision from Chrome / https://improv-wifi.com");
+    let ip = improv::run_setup(bt_device, &mut control, stack).await;
 
-    let server = Server::new_with_config(GapConfig::Peripheral(PeripheralConfig {
-        name: DEVICE_NAME,
-        appearance: &appearance::power_device::GENERIC_POWER_DEVICE,
-    }))
-    .unwrap();
-    let _ = server.set(&server.battery.level, &100u8);
+    info!("pixel64: ONLINE — ip = {}", ip);
+    control.gpio_set(0, true).await; // solid onboard LED = online
 
-    match select(runner.run(), advertise_loop(&mut peripheral, &server)).await {
-        Either::First(_) => panic!("pixel64: BLE runner stopped"),
-        Either::Second(never) => never,
-    }
-}
-
-/// Advertise connectably, accept a client, log GATT activity until it disconnects, then re-advertise.
-async fn advertise_loop(
-    peripheral: &mut Peripheral<'_, ExternalController<cyw43::bluetooth::BtDriver<'static>, 1>, DefaultPacketPool>,
-    server: &Server<'_>,
-) -> ! {
-    let mut adv_data = [0u8; 31];
-    let adv_len = AdStructure::encode_slice(
-        &[
-            AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
-            AdStructure::CompleteLocalName(DEVICE_NAME.as_bytes()),
-        ],
-        &mut adv_data[..],
-    )
-    .unwrap();
-    let params = AdvertisementParameters::default();
-
+    let mut tick: u32 = 0;
     loop {
-        info!("pixel64: advertising as '{}'", DEVICE_NAME);
-        let advertiser = peripheral
-            .advertise(
-                &params,
-                Advertisement::ConnectableScannableUndirected {
-                    adv_data: &adv_data[..adv_len],
-                    scan_data: &[],
-                },
-            )
-            .await
-            .unwrap();
-        let conn = match advertiser.accept().await {
-            Ok(c) => match c.with_attribute_server(server) {
-                Ok(conn) => conn,
-                Err(e) => {
-                    warn!("pixel64: attribute server error: {:?}", e);
-                    continue;
-                }
-            },
-            Err(e) => {
-                warn!("pixel64: accept error: {:?}", e);
-                continue;
-            }
-        };
-        info!("pixel64: BLE client connected");
-        loop {
-            match conn.next().await {
-                GattConnectionEvent::Disconnected { reason } => {
-                    info!("pixel64: BLE client disconnected: {:?}", reason);
-                    break;
-                }
-                GattConnectionEvent::Gatt { event } => {
-                    // Acknowledge reads/writes so the client sees a working GATT server.
-                    if let Ok(reply) = event.accept() {
-                        reply.send().await;
-                    }
-                }
-                _ => {}
-            }
-        }
+        info!("pixel64: online at {} — tick {}", ip, tick);
+        tick = tick.wrapping_add(1);
+        Timer::after_secs(5).await;
     }
 }

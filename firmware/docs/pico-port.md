@@ -187,6 +187,33 @@ While spiking, also **test macOS Chrome Web Bluetooth** — our ESP32 macOS fail
 Swapping to the CYW43439's BT controller *could* fix it (plausible mechanism, no evidence either
 way). Cheap to test; the only way to know.
 
+### BLE findings from the M2c spike (verified on hardware)
+
+**✅ Wi-Fi-join-while-BLE-connected works.** The device joins Wi-Fi during an active Improv GATT
+link and reports status/IP back over BLE. The #1 architectural risk is retired — the provisioning
+flow ports.
+
+**⚠️ cyw43 BLE byte-1 corruption (worked around).** GATT-write values from the client occasionally
+arrive with **byte index 1 decremented by one** — reproducible, intermittent, and *masked by logging
+latency* (so it's a timing/race in the cyw43 BT receive path or trouble's attribute write, below our
+code). For Improv send-wifi, byte 1 is the redundant `datalen` field; the SSID/password and checksum
+come through intact. `parse_send_wifi` therefore **reconstructs `datalen` from the self-delimiting
+structure and validates the Improv checksum** — a match proves the creds are intact (any real cred
+corruption fails the checksum → reject → the client retries). We never accept creds the checksum
+doesn't cover. This makes Android provisioning reliable. *(Candidate for an upstream cyw43/trouble
+bug report; revisit if a cyw43 update changes the BT path.)*
+
+**❌ macOS Chrome still fails — and it's NOT the controller.** macOS Chrome connects, but the
+credential write never reaches the device (`client connected`, then no `received … RPC`; the browser
+spins forever). This is the **identical** symptom we had on the ESP — reproduced here on a *different
+radio* (cyw43). Since the controller changed but the failure didn't, the ESP diagnosis ("esp-radio ↔
+CoreBluetooth link layer") was **incomplete**: the common factors are **trouble-host** (same host
+stack on both boards) and **macOS CoreBluetooth**, so the real cause is more likely trouble's handling
+of macOS's post-connect connection-parameter update / idle link (cf. esp-idf #11280). **Android /
+Windows / Linux Chrome remain the supported provisioning path** (unchanged from the ESP). macOS is
+still open — next probes: enable trouble's `[host]` logging during a macOS attempt to see whether the
+write reaches the link layer at all, and try trouble's `connection-params-update` feature.
+
 ## Smaller platform changes
 
 - **Onboard LED is on the CYW43 chip, not a GPIO.** Drive it via `control.gpio_set(0, on).await` —
@@ -234,9 +261,12 @@ plan.
      `pixel64` with a battery service. Verified on hardware (nRF Connect connects + reads). Pairing
      is cyw43 0.7 + trouble 0.6 on bt-hci 0.8 — see §"Dependency compatibility". The ESP `improv.rs`
      GATT patterns ported verbatim (still trouble 0.6).
-   - **2c — Spike Risk 2 (concurrency)** — port the Improv GATT, then Wi-Fi-join while a BLE
-     central holds the link; verify notifications survive. Test macOS Chrome here too. Decide on the
-     provisioning-flow fallback if needed.
+   - **2c — Spike Risk 2 (concurrency)** ✅ *(done)* — Improv GATT ported (`src/improv.rs`); device
+     joins Wi-Fi while the BLE link is up and reports IP back over BLE. Verified end-to-end from
+     Android. Findings above: concurrency works; a cyw43 byte-1 corruption is worked around via
+     checksum reconstruction; **macOS Chrome still fails** (now known to be trouble/CoreBluetooth,
+     not the controller) — still open, Android remains the supported path. Persistence stubbed
+     (storage = M4).
 3. **Spike Risk 1** — minimal PIO+DMA HUB75 driver lighting the 64×64 panel with a test pattern
    (port the PIO program; prove DMA chain + BCM). The riskiest *build*.
 4. **Port `storage.rs`** — swap flash handle, fixed offset. Smallest, self-contained; do it early.

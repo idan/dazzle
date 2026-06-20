@@ -45,6 +45,8 @@ trouble-host = { version = "0.6.0", features = ["default-packet-pool-mtu-255", "
 embassy-sync = "0.7"
 # Concurrent inline futures (the trouble runner + the advertise/serve loop run together).
 embassy-futures = "0.1"
+# Fixed-capacity String/Vec for the Improv RPC payloads (no_std, no heap).
+heapless = "0.9"
 
 # USB-serial logging: one USB cable carries both flashing (BOOTSEL UF2) and `log` output — no
 # debug probe. Keeps the `log::info!` API the ESP firmware used (no defmt). See docs/pico-port.md.
