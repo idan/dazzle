@@ -29,6 +29,7 @@ use heapless::{String, Vec};
 use log::{info, warn};
 use trouble_host::prelude::*;
 
+use crate::display::{self, Screen};
 use crate::net;
 use crate::storage::{CredStore, Credentials};
 
@@ -244,6 +245,7 @@ async fn process_rpc<P: PacketPool>(
     };
 
     info!("[improv] provisioning Wi-Fi: {}", ssid);
+    display::set_screen(Screen::Connecting(ssid.clone()));
     notify_state(server, conn, STATE_PROVISIONING).await;
 
     // We join Wi-Fi here while the BLE GATT link is still connected, and the notify_*() calls below

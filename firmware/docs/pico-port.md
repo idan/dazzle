@@ -286,8 +286,15 @@ plan.
      around via checksum reconstruction; **macOS Chrome solved** — it was the Improv SDK's
      `writeValueWithoutResponse()` (improv-wifi#213, fixed upstream), confirmed via the
      `web/improv-test/` client; no firmware change. Persistence stubbed (storage = M4).
-3. **Spike Risk 1** — minimal PIO+DMA HUB75 driver lighting the 64×64 panel with a test pattern
-   (port the PIO program; prove DMA chain + BCM). The riskiest *build*.
+3. **HUB75 PIO+DMA display (Risk 1)** ✅ *(done)* — custom driver `src/hub75.rs` (3 PIO SMs on PIO1
+   + self-chaining 4-channel DMA via PAC + BCM, ported from kjagiello/hub75-pio), `src/display.rs`
+   (Screen renderer over the driver), wired into the boot flow (`main.rs`/`improv.rs`). Built in 3
+   verified stages — bit-bang first-light (`firstlight` bin), PIO driver test pattern (`hub75test`
+   bin), then integration. Verified on hardware: status screens legible, IP shown, and **rock-solid
+   with no flicker while the radio is active** — the ESP build's flicker is gone (PIO refresh is
+   hardware-timed, fully decoupled from the radio). Open polish: BCM color-depth tuning (raise
+   `OE_DIV` + gamma LUT) for smooth gradients — doesn't affect solid-color text. Panel is 180°
+   from the draw origin (hub75-pio un-mirror convention) — rotate the square panel to suit.
 4. **Port `storage.rs`** ✅ *(done)* — sequential-storage over embassy-rp flash at a fixed top-of-flash
    region (16 KiB reserved in memory.x); `net.rs` extracted as the shared join+DHCP helper; boot
    state machine + persist-on-provision wired into `main.rs`/`improv.rs`. Verified on hardware:

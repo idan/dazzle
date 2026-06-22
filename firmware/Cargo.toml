@@ -3,6 +3,7 @@ edition      = "2024"
 name         = "pixel64"
 rust-version = "1.88"
 version      = "0.1.0"
+default-run  = "pixel64"  # `cargo run` flashes the firmware; diagnostics are --bin firstlight/hub75test
 
 [[bin]]
 name = "pixel64"

@@ -17,17 +17,19 @@ use embassy_rp::bind_interrupts;
 use embassy_rp::clocks::RoscRng;
 use embassy_rp::dma::{Channel, InterruptHandler as DmaInterruptHandler};
 use embassy_rp::gpio::{Level, Output};
-use embassy_rp::peripherals::{DMA_CH0, PIO0, USB};
+use embassy_rp::peripherals::{DMA_CH0, PIO0, PIO1, USB};
 use embassy_rp::pio::{InterruptHandler as PioInterruptHandler, Pio};
 use embassy_rp::usb::{Driver, InterruptHandler as UsbInterruptHandler};
 use embassy_time::Timer;
+use heapless::String;
 use log::{info, warn};
 use static_cell::StaticCell;
 
+use pixel64::display::{self, Screen};
+use pixel64::hub75::{Display, DisplayMemory, Hub75Dma, Hub75Pins};
+use pixel64::improv;
 use pixel64::net;
 use pixel64::storage::CredStore;
-
-use pixel64::improv;
 
 // Program metadata for `picotool info`. The embassy-rp `binary-info` feature emits the RP2350 boot
 // image-def block (.start_block) on its own, so no manual `ImageDef` is needed.
@@ -41,7 +43,8 @@ pub static PICOTOOL_ENTRIES: [embassy_rp::binary_info::EntryAddr; 3] = [
 
 bind_interrupts!(struct Irqs {
     USBCTRL_IRQ => UsbInterruptHandler<USB>;
-    PIO0_IRQ_0 => PioInterruptHandler<PIO0>;
+    PIO0_IRQ_0 => PioInterruptHandler<PIO0>; // cyw43
+    PIO1_IRQ_0 => PioInterruptHandler<PIO1>; // HUB75
     DMA_IRQ_0 => DmaInterruptHandler<DMA_CH0>;
 });
 
@@ -79,6 +82,42 @@ async fn main(spawner: Spawner) {
     // USB-serial logging on the same cable that flashes the board.
     let driver = Driver::new(p.USB, Irqs);
     spawner.spawn(logger_task(driver).unwrap());
+
+    // HUB75 panel (PIO1 + DMA_CH2–5) — bring it up first so "Booting" shows while the radio comes
+    // up. Pin map per docs/hub75-pico-wiring.md.
+    let pio1 = Pio::new(p.PIO1, Irqs);
+    static DMEM: StaticCell<DisplayMemory> = StaticCell::new();
+    let panel = Display::new(
+        DMEM.init(DisplayMemory::new()),
+        pio1.common,
+        pio1.sm0,
+        pio1.sm1,
+        pio1.sm2,
+        Hub75Pins {
+            r1: p.PIN_0,
+            g1: p.PIN_1,
+            b1: p.PIN_2,
+            r2: p.PIN_3,
+            g2: p.PIN_4,
+            b2: p.PIN_5,
+            clk: p.PIN_6,
+            lat: p.PIN_7,
+            oe: p.PIN_8,
+            a: p.PIN_9,
+            b: p.PIN_10,
+            c: p.PIN_11,
+            d: p.PIN_12,
+            e: p.PIN_13,
+        },
+        Hub75Dma {
+            fb: p.DMA_CH2,
+            fb_loop: p.DMA_CH3,
+            oe: p.DMA_CH4,
+            oe_loop: p.DMA_CH5,
+        },
+    );
+    display::start(panel, spawner);
+    display::set_screen(Screen::Booting);
 
     info!("pixel64: bringing up cyw43 radio (Wi-Fi + BT)…");
 
@@ -136,21 +175,27 @@ async fn main(spawner: Spawner) {
     let ip = match store.load().await {
         Some(creds) => {
             info!("pixel64: stored credentials for '{}' — connecting", creds.ssid);
+            let mut showing: String<32> = String::new();
+            let _ = showing.push_str(&creds.ssid);
+            display::set_screen(Screen::Connecting(showing));
             match net::connect(&mut control, stack, &creds.ssid, &creds.password).await {
                 Ok(ip) => ip,
                 Err(()) => {
                     warn!("pixel64: stored credentials failed — entering Improv setup");
+                    display::set_screen(Screen::Setup);
                     improv::run_setup(bt_device, &mut control, stack, &mut store).await
                 }
             }
         }
         None => {
             info!("pixel64: no stored credentials — entering Improv setup (provision via Chrome)");
+            display::set_screen(Screen::Setup);
             improv::run_setup(bt_device, &mut control, stack, &mut store).await
         }
     };
 
     info!("pixel64: ONLINE — ip = {}", ip);
+    display::set_screen(Screen::Online(ip));
     control.gpio_set(0, true).await; // solid onboard LED = online
 
     // NOTE: explicit factory reset (wipe creds on a button hold) is deferred — embassy-rp 0.10 gates
