@@ -1,0 +1,41 @@
+@import 'tailwindcss';
+
+/* Project palette, exposed as Tailwind color utilities (bg-bg, text-muted, …)
+   and as CSS vars for hand-written component styles. */
+@theme {
+	--color-bg: #0d0d11;
+	--color-panel: #131319;
+	--color-panel2: #16161c;
+	--color-border: #2a2a32;
+	--color-text: #d8d8e0;
+	--color-muted: #6b6b78;
+	--color-accent: #7c9cff;
+	--font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+@layer base {
+	:root {
+		color-scheme: dark;
+		/* legacy aliases used by hand-written scoped component styles */
+		--bg: var(--color-bg);
+		--panel: var(--color-panel);
+		--border: var(--color-border);
+		--text: var(--color-text);
+		--muted: var(--color-muted);
+		--accent: var(--color-accent);
+	}
+	html,
+	body {
+		height: 100%;
+	}
+	body {
+		margin: 0;
+		background: var(--color-bg);
+		color: var(--color-text);
+		font-family:
+			system-ui,
+			-apple-system,
+			'Segoe UI',
+			sans-serif;
+	}
+}

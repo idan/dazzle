@@ -4,11 +4,16 @@ Monorepo for an internet-connected **64×64 HUB75 LED pixel display**:
 
 - **`firmware/`** — the device: an **ESP32-C6-DevKitM-1** driving a **Waveshare P3 64×64 HUB75**
   panel, in **Rust (esp-hal 1.1 + Embassy, no_std)**. All Cargo/build/docs for the device live here.
-- **`web/`** — (planned) the cloud backend + web UI: **Svelte 5 / SvelteKit on Cloudflare**, tooled
-  with **Bun**. Not scaffolded yet.
+- **`web/`** — the cloud backend + web UI: **Svelte 5 / SvelteKit on Cloudflare**, tooled with
+  **Bun**. Currently a **procedural scene editor / simulator** spike (text buffer + live 64×64
+  preview). See [web/README.md](web/README.md) and [docs/scenes/authoring.md](docs/scenes/authoring.md).
+- **`renderer/`** — the **shared scene renderer** (Rust): a shader-bytecode stack VM that compiles
+  to **wasm32** (the web preview) and is meant to also drive the device above the framebuffer seam.
+  See [renderer/README.md](renderer/README.md).
 
-Repo root holds only shared bits (this file, `.claude/`, `.gitignore`). **Run firmware commands from
-`firmware/`** (e.g. `cd firmware && cargo run`).
+Repo root holds shared bits (this file, `.claude/`, `.gitignore`, `docs/scenes/`, `renderer/`).
+**Run firmware commands from `firmware/`** (e.g. `cd firmware && cargo run`); web commands from
+`web/` (`bun run dev`, `bun run build:wasm`).
 
 ## Current state (firmware)
 

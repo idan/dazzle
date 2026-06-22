@@ -80,6 +80,7 @@ Each of these is a sibling document. Marked ✍️ = drafted, 📋 = planned.
 
 | Doc | Covers |
 |---|---|
+| ✍️ [authoring.md](authoring.md) | **Hands-on guide** to writing scenes in the web editor: the two-block model, coordinates, types, built-ins, inputs, and how the language diverges from GLSL. Start here to *write* a scene. |
 | ✍️ [layers-and-compositing.md](layers-and-compositing.md) | The four layer kinds, their properties, transforms, blend modes, opacity/masking, and the compositor pass. |
 | ✍️ [inputs-and-binding.md](inputs-and-binding.md) | Declaring scene inputs (name/type/default/source), binding layer properties to them, string interpolation, live updates. |
 | ✍️ [shader-vm.md](shader-vm.md) | The procedural-layer VM: value model, per-frame/per-pixel execution, opcode set, built-ins, LUTs, eval-resolution/fps, resource bounds. |

@@ -1,0 +1,19 @@
+[package]
+name = "pixel64-renderer"
+version = "0.0.0"
+edition = "2021"
+description = "Shared scene renderer (shader VM + compositor) for pixel64 — compiles to wasm32 (web preview) and the device target."
+
+[lib]
+# cdylib for the wasm build; rlib so firmware can depend on it later.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+# Transcendentals via libm: f32::sin/cos/etc. have no implementation on
+# wasm32-unknown-unknown (no system libm) and would fail to link.
+libm = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = true
