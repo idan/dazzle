@@ -1,0 +1,70 @@
+// Opcode numbering — MUST stay in sync with renderer/src/vm.rs (`mod op`).
+// The shader compiler (emit.ts) produces these; the Rust VM consumes them.
+
+export const OP = {
+	END: 0,
+	PUSH_CONST: 1,
+	LOAD_UNIFORM: 2,
+	LOAD_SLOT: 3,
+	STORE_SLOT: 4,
+	DUP: 5,
+	POP: 6,
+	SWAP: 7,
+	ADD: 8,
+	SUB: 9,
+	MUL: 10,
+	DIV: 11,
+	NEG: 12,
+	MOD: 13,
+	ABS: 14,
+	FLOOR: 15,
+	CEIL: 16,
+	FRACT: 17,
+	SIGN: 18,
+	SQRT: 19,
+	MIN: 20,
+	MAX: 21,
+	CLAMP: 22,
+	MIX: 23,
+	STEP: 24,
+	SMOOTHSTEP: 25,
+	SIN: 26,
+	COS: 27,
+	TAN: 28,
+	ATAN2: 29,
+	EXP: 30,
+	LOG: 31,
+	POW: 32,
+	HASH: 33,
+	NOISE2: 34,
+	NOISE3: 35,
+	LT: 36,
+	GT: 37,
+	LE: 38,
+	GE: 39,
+	EQ: 40,
+	NE: 41,
+	AND: 42,
+	OR: 43,
+	NOT: 44,
+	SELECT: 45,
+	JMP: 46,
+	JMP_IF_ZERO: 47,
+	STORE_OUT: 48
+} as const;
+
+// Reserved uniform slots (built-ins). Bound scene inputs start at index 10.
+export const UNIFORM = {
+	t: 0,
+	frame: 1,
+	resX: 2,
+	resY: 3,
+	x: 4,
+	y: 5,
+	uvX: 6,
+	uvY: 7,
+	stX: 8,
+	stY: 9
+} as const;
+
+export const FIRST_INPUT_UNIFORM = 10;

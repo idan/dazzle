@@ -5,11 +5,17 @@ Monorepo for an internet-connected **64×64 HUB75 LED pixel display**:
 - **`firmware/`** — the device: a **Raspberry Pi Pico 2 W (RP2350)** driving a **Waveshare P3 64×64
   HUB75** panel, in **Rust (embassy-rp, no_std)**. All Cargo/build/docs for the device live here.
 - **`web/`** — the cloud backend + web UI: **Svelte 5 / SvelteKit on Cloudflare** (Workers + D1 +
-  Drizzle), tooled with **Bun**. The app is scaffolded (default `sv` template); the bespoke piece so
-  far is `web/improv-test/`, a zero-build Web Bluetooth provisioning test client.
+  Drizzle), tooled with **Bun**. Currently a **procedural scene editor / simulator** spike (text
+  buffer + live 64×64 preview); also hosts `web/improv-test/`, a zero-build Web Bluetooth
+  provisioning test client. See [web/README.md](web/README.md) and
+  [docs/scenes/authoring.md](docs/scenes/authoring.md).
+- **`renderer/`** — the **shared scene renderer** (Rust): a shader-bytecode stack VM that compiles
+  to **wasm32** (the web preview) and is meant to also drive the device above the framebuffer seam.
+  See [renderer/README.md](renderer/README.md).
 
-Repo root holds only shared bits (this file, `.claude/`, `.gitignore`). **Run firmware commands from
-`firmware/`** (e.g. `cd firmware && cargo run`).
+Repo root holds shared bits (this file, `.claude/`, `.gitignore`, `docs/scenes/`, `renderer/`).
+**Run firmware commands from `firmware/`** (e.g. `cd firmware && cargo run`); web commands from
+`web/` (`bun run dev`, `bun run build:wasm`).
 
 The firmware was **ported from an ESP32-C6** to the Pico 2 W. The full ESP32 tree is preserved at git
 tag **`esp32-final`**; the migration story and the verified dependency set live in
