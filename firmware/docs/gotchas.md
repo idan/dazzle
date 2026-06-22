@@ -66,6 +66,21 @@ upgrade-evaluation recipe in [pico-port.md](pico-port.md).
   *read* returns; the Improv client relies on notifications to advance.
 - **ATT MTU** negotiates up (macOS reaches 251); reads/writes that fit don't fragment.
 
+## Wi-Fi join: cyw43 can hang instead of erroring
+
+`cyw43::Control::join` has **no internal timeout** — `wait_for_join` loops waiting for a result
+event. A *wrong SSID* yields `NetworkNotFound` and a *wrong (but valid-length) password* usually
+yields `AuthenticationFailure`, both of which return — but an **invalid-length passphrase** (e.g. a
+7-char WPA2 password; valid is 8–63) makes the firmware never emit an auth event, so it **hangs
+forever**. Defenses, all in place (`src/net.rs` / `src/improv.rs`):
+
+- **Validate passphrase length before joining** (`improv.rs` rejects non-empty length outside 8–63 →
+  instant "bad password", never reaches the driver). This is the real fix for the common typo.
+- **Bound `join` with a 20 s timeout** (`select(join, Timer)`) as a backstop for other hangs.
+- **`leave()` (disassociate) before every join.** Abandoning `join` on timeout is cancel-unsafe —
+  it can leave cyw43 mid-association so the *next* join hangs. `leave()` resets the state so retries
+  are clean.
+
 ## macOS Chrome provisioning — SOLVED (was a browser bug)
 
 The ESP build's macOS wall was **not** the device. The Improv JS SDK wrote credentials with
@@ -85,10 +100,13 @@ the bug). A stale `improv-wifi.com` PWA cache can still serve the old SDK — cl
   cyw43 link layer is autonomous and survives the brief host pause.
 - **Creds live in a reserved region at the top of flash** (last 16 KiB, kept out of `memory.x`'s
   `FLASH` length), via `sequential-storage`. No esp-idf partition table — a fixed offset.
-- **Factory reset is deferred.** `embassy_rp::bootsel::is_bootsel_pressed` is gated to **RP2040** in
-  0.10, so the planned BOOTSEL-hold reset isn't wired up. The boot path auto-recovers (stored creds
-  that fail to connect fall through to setup). Interim manual wipe: `picotool erase` the creds region
-  in BOOTSEL mode (use `-a` if a `-r` range erase doesn't take).
+- **Factory reset (hold BOOTSEL ~3 s while running).** `embassy_rp::bootsel` is gated to **RP2040**
+  in 0.10, so we hand-rolled the RP2350 read in `src/bootsel.rs` (ported from embassy `main`: the
+  QSPI-SS pin is IO_QSPI **`gpio(3)`** on RP2350 vs `gpio(1)` on RP2040; OEOVER=DISABLE to float CS,
+  read `status().infrompad()`, run from RAM with IRQs off). It needs a minimal `in_ram` since
+  embassy's is `pub(crate)` — a `critical_section` suffices here because no DMA reads flash. The
+  runtime read is independent of the power-on bootrom BOOTSEL sampling (flashing mode). `Oeover` is
+  `DISABLE` (all-caps) in rp-pac 7.0.0, not `Disable`.
 
 ## Build / flash gotchas
 

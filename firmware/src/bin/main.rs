@@ -25,6 +25,7 @@ use heapless::String;
 use log::{info, warn};
 use static_cell::StaticCell;
 
+use pixel64::bootsel;
 use pixel64::display::{self, Screen};
 use pixel64::hub75::{Display, DisplayMemory, Hub75Dma, Hub75Pins};
 use pixel64::improv;
@@ -198,16 +199,26 @@ async fn main(spawner: Spawner) {
     display::set_screen(Screen::Online(ip));
     control.gpio_set(0, true).await; // solid onboard LED = online
 
-    // NOTE: explicit factory reset (wipe creds on a button hold) is deferred — embassy-rp 0.10 gates
-    // `bootsel` to RP2040, and the RP2350 BOOTSEL read isn't wrapped yet. The boot state machine
-    // already auto-recovers (stored creds that fail to connect fall through to Improv setup), which
-    // covers a changed/unreachable network. A forced re-provision (BOOTSEL or an external button)
-    // calling store.clear() is a follow-up — `store` stays live (main never returns). See
-    // docs/pico-port.md.
-    let mut tick: u32 = 0;
+    // Factory reset: hold BOOTSEL ~3 s to wipe credentials and reboot into setup. The runtime
+    // BOOTSEL read briefly floats the flash CS (IRQs off, RAM code — see src/bootsel.rs); fine
+    // alongside the PIO/DMA refresh, and it doesn't overlap a flash write here.
+    let mut bootsel_pin = p.BOOTSEL;
+    let mut held_ms = 0u32;
     loop {
-        info!("pixel64: online at {} — tick {}", ip, tick);
-        tick = tick.wrapping_add(1);
-        Timer::after_secs(30).await;
+        Timer::after_millis(100).await;
+        if bootsel::is_bootsel_pressed(bootsel_pin.reborrow()) {
+            held_ms += 100;
+            if held_ms >= 3000 {
+                warn!("pixel64: BOOTSEL held — wiping Wi-Fi credentials; release to reboot");
+                let _ = store.clear().await;
+                while bootsel::is_bootsel_pressed(bootsel_pin.reborrow()) {
+                    Timer::after_millis(50).await;
+                }
+                Timer::after_millis(200).await; // let the log flush over USB
+                cortex_m::peripheral::SCB::sys_reset();
+            }
+        } else {
+            held_ms = 0;
+        }
     }
 }

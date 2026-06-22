@@ -24,10 +24,11 @@ tag **`esp32-final`**; the migration story and the verified dependency set live 
 - ✅ **Wi-Fi onboarding** — first-run provisioning via **Improv over BLE** (cyw43 + trouble-host).
   Provision from Chrome on **Android / Windows / Linux *and* macOS** (the ESP's macOS wall was a
   browser-SDK bug, not the device — see below). Credentials **persist to flash**; the IP shows on the
-  panel; on reboot it rejoins automatically (else re-enters setup).
+  panel; on reboot it rejoins automatically (else re-enters setup). Hold **BOOTSEL ~3 s** while
+  running = factory reset (wipe creds, reboot to setup). Bad creds fail fast (length-validated +
+  join timeout) with a `FAILED` screen — never a hang.
 - ⏳ **Open (polish, non-blocking)** — BCM color-depth tuning for smooth gradients (solid-color text
-  is fine); a **factory-reset button** (deferred — `embassy_rp::bootsel` is RP2040-only on 0.10); the
-  full `web/` app scaffold.
+  is fine); the full `web/` app scaffold.
 
 ## Read before working
 

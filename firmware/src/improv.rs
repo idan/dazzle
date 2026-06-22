@@ -176,6 +176,7 @@ async fn accept_loop(
             return ip;
         }
         info!("[improv] client disconnected without provisioning; re-advertising");
+        display::set_screen(Screen::Setup); // clear any "joining"/"failed" screen from this attempt
     }
 }
 
@@ -244,6 +245,15 @@ async fn process_rpc<P: PacketPool>(
         return None;
     };
 
+    // A WPA2 passphrase is 8–63 chars (or empty for an open network). cyw43's `join` HANGS on an
+    // invalid-length passphrase rather than returning an error (its auth event never arrives), so
+    // reject it up front instead of feeding it to the driver.
+    if !password.is_empty() && !(8..=63).contains(&password.len()) {
+        warn!("[improv] invalid password length ({}); rejecting", password.len());
+        fail(server, conn, "bad password").await;
+        return None;
+    }
+
     info!("[improv] provisioning Wi-Fi: {}", ssid);
     display::set_screen(Screen::Connecting(ssid.clone()));
     notify_state(server, conn, STATE_PROVISIONING).await;
@@ -266,11 +276,21 @@ async fn process_rpc<P: PacketPool>(
             Some(ip)
         }
         Err(()) => {
-            notify_error(server, conn, ERR_UNABLE_TO_CONNECT).await;
-            notify_state(server, conn, STATE_AUTHORIZED).await; // ready for another attempt
+            warn!("[improv] Wi-Fi connect failed");
+            fail(server, conn, "try again").await;
             None
         }
     }
+}
+
+/// Report a provisioning failure: Improv error + back to authorized, and a `FAILED` screen (clearing
+/// any stuck "joining" screen) so the panel never looks hung.
+async fn fail<P: PacketPool>(server: &Server<'_>, conn: &GattConnection<'_, '_, P>, msg: &str) {
+    notify_error(server, conn, ERR_UNABLE_TO_CONNECT).await;
+    notify_state(server, conn, STATE_AUTHORIZED).await; // ready for another attempt
+    let mut s: String<24> = String::new();
+    let _ = s.push_str(msg);
+    display::set_screen(Screen::Failed(s));
 }
 
 async fn notify_state<P: PacketPool>(server: &Server<'_>, conn: &GattConnection<'_, '_, P>, s: u8) {

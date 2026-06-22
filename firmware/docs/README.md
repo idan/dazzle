@@ -29,9 +29,9 @@ ESP32-C6 (the original tree is preserved at git tag `esp32-final`).
 - ✅ Wi-Fi onboarding over BLE (Improv): provision from Chrome (**Android + macOS** verified), creds
   persist, IP shown on the panel.
 - ✅ Boot state machine: stored creds → reconnect; otherwise Improv setup. Auto-recovers if a stored
-  network fails.
-- ⏳ Open (polish): BCM color-depth tuning (smooth gradients); a factory-reset button (deferred); the
-  `web/` app scaffold.
+  network fails; bad creds fail fast (length-validated + join timeout), never hang.
+- ✅ Factory reset: hold **BOOTSEL ~3 s** while running → wipe creds, reboot to setup.
+- ⏳ Open (polish): BCM color-depth tuning (smooth gradients); the `web/` app scaffold.
 
 ## Hardware
 

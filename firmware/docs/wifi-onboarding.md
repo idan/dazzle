@@ -51,9 +51,13 @@ boot ─► panel: Booting ─► load creds from flash
 
 - Credentials that **fail to connect** (changed/unreachable network) fall through to setup, so the
   device re-provisions itself without intervention.
-- **Factory reset is deferred** (no in-firmware button yet — `embassy_rp::bootsel` is RP2040-only on
-  0.10). Interim: erase the creds region with `picotool` in BOOTSEL mode. See
-  [gotchas.md](gotchas.md).
+- **Bad provisioning input fails fast, never hangs:** the passphrase length is validated (WPA2
+  8–63 chars) before the driver sees it, and the join is bounded by a 20 s timeout — a wrong
+  SSID/password shows `FAILED` on the panel and the Improv client gets an error, ready to retry.
+- **Factory reset:** hold **BOOTSEL ~3 s** while the device is running → credentials are wiped and it
+  reboots into setup. (Implemented via a custom RP2350 BOOTSEL read — `src/bootsel.rs` — since
+  embassy-rp 0.10's `bootsel` is RP2040-only. Holding BOOTSEL *at power-on* still enters flashing
+  mode; the two are independent. See [gotchas.md](gotchas.md).)
 
 ## Architecture
 
