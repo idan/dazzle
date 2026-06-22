@@ -21,13 +21,16 @@ use core::fmt::Write as _;
 use core::net::Ipv4Addr;
 
 use cyw43::bluetooth::BtDriver;
-use cyw43::{Control, JoinOptions};
+use cyw43::Control;
 use embassy_futures::select::{select, Either};
 use embassy_net::Stack;
-use embassy_time::{Duration, Timer};
+use embassy_time::Duration;
 use heapless::{String, Vec};
 use log::{info, warn};
 use trouble_host::prelude::*;
+
+use crate::net;
+use crate::storage::{CredStore, Credentials};
 
 pub const DEVICE_NAME: &str = "pixel64";
 
@@ -52,10 +55,6 @@ const IMPROV_UUID_LE: [u8; 16] = [
 
 const CONNECTIONS_MAX: usize = 1;
 const L2CAP_CHANNELS_MAX: usize = 2;
-
-/// How long to wait for a DHCP lease after associating before declaring the attempt failed (keeps
-/// a silent DHCP failure from hanging the BLE serve loop).
-const DHCP_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[gatt_server]
 struct Server {
@@ -83,6 +82,7 @@ pub async fn run_setup(
     bt_device: BtDriver<'static>,
     control: &mut Control<'static>,
     stack: Stack<'static>,
+    store: &mut CredStore,
 ) -> Ipv4Addr {
     let controller: BleController = ExternalController::new(bt_device);
     let address = Address::random([0xf0, 0x64, 0x1a, 0x05, 0x8f, 0xff]);
@@ -112,7 +112,7 @@ pub async fn run_setup(
     info!("[improv] setup mode: advertising as {}", DEVICE_NAME);
     match select(
         runner.run(),
-        accept_loop(&mut peripheral, &server, control, stack, &ble_stack),
+        accept_loop(&mut peripheral, &server, control, stack, &ble_stack, store),
     )
     .await
     {
@@ -127,6 +127,7 @@ async fn accept_loop(
     control: &mut Control<'static>,
     stack: Stack<'static>,
     ble_stack: &trouble_host::Stack<'_, BleController, DefaultPacketPool>,
+    store: &mut CredStore,
 ) -> Ipv4Addr {
     let mut adv_data = [0u8; 31];
     let adv_len = AdStructure::encode_slice(
@@ -170,7 +171,7 @@ async fn accept_loop(
             }
         };
         info!("[improv] client connected");
-        if let Some(ip) = serve_connection(server, &conn, control, stack, ble_stack).await {
+        if let Some(ip) = serve_connection(server, &conn, control, stack, ble_stack, store).await {
             return ip;
         }
         info!("[improv] client disconnected without provisioning; re-advertising");
@@ -183,6 +184,7 @@ async fn serve_connection<P: PacketPool>(
     control: &mut Control<'static>,
     stack: Stack<'static>,
     ble_stack: &trouble_host::Stack<'_, BleController, P>,
+    store: &mut CredStore,
 ) -> Option<Ipv4Addr> {
     loop {
         match conn.next().await {
@@ -215,7 +217,7 @@ async fn serve_connection<P: PacketPool>(
                 {
                     info!("[improv] received {}-byte RPC", cmd.len());
                     let _ = server.set(&server.improv.rpc_command, &Vec::<u8, 128>::new());
-                    if let Some(ip) = process_rpc(server, conn, &cmd, control, stack).await {
+                    if let Some(ip) = process_rpc(server, conn, &cmd, control, stack, store).await {
                         return Some(ip);
                     }
                 }
@@ -233,6 +235,7 @@ async fn process_rpc<P: PacketPool>(
     data: &[u8],
     control: &mut Control<'static>,
     stack: Stack<'static>,
+    store: &mut CredStore,
 ) -> Option<Ipv4Addr> {
     let Some((ssid, password)) = parse_send_wifi(data) else {
         warn!("[improv] malformed send-wifi RPC");
@@ -243,13 +246,17 @@ async fn process_rpc<P: PacketPool>(
     info!("[improv] provisioning Wi-Fi: {}", ssid);
     notify_state(server, conn, STATE_PROVISIONING).await;
 
-    // The concurrency spike: we join Wi-Fi here while the BLE GATT link is still connected, and the
-    // notify_*() calls below must reach the client over that same link.
-    match join_and_dhcp(control, stack, &ssid, &password).await {
+    // We join Wi-Fi here while the BLE GATT link is still connected, and the notify_*() calls below
+    // must reach the client over that same link.
+    match net::connect(control, stack, &ssid, &password).await {
         Ok(ip) => {
             info!("[improv] connected, ip = {}", ip);
-            // M2c spike: persistence is stubbed — storage is milestone M4.
-            warn!("[improv] (spike) NOT persisting credentials yet — storage is M4");
+            // Persist so this network is rejoined on the next boot without re-provisioning.
+            let creds = Credentials { ssid, password };
+            match store.save(&creds).await {
+                Ok(()) => info!("[improv] credentials persisted"),
+                Err(e) => warn!("[improv] failed to persist credentials: {:?}", e),
+            }
             let result = build_result(ip);
             let _ = server.set(&server.improv.rpc_result, &result);
             let _ = server.improv.rpc_result.notify(conn, &result).await;
@@ -262,31 +269,6 @@ async fn process_rpc<P: PacketPool>(
             None
         }
     }
-}
-
-/// Join Wi-Fi with the given credentials and wait for a DHCP lease; returns the assigned IPv4.
-async fn join_and_dhcp(
-    control: &mut Control<'static>,
-    stack: Stack<'static>,
-    ssid: &str,
-    password: &str,
-) -> Result<Ipv4Addr, ()> {
-    if let Err(e) = control
-        .join(ssid, JoinOptions::new(password.as_bytes()))
-        .await
-    {
-        warn!("[improv] join failed: {:?}", e);
-        return Err(());
-    }
-    match select(stack.wait_config_up(), Timer::after(DHCP_TIMEOUT)).await {
-        Either::First(()) => {}
-        Either::Second(()) => {
-            warn!("[improv] DHCP timed out after associating");
-            return Err(());
-        }
-    }
-    let ip = stack.config_v4().ok_or(())?.address.address();
-    Ok(ip)
 }
 
 async fn notify_state<P: PacketPool>(server: &Server<'_>, conn: &GattConnection<'_, '_, P>, s: u8) {

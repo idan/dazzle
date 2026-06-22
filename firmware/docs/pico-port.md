@@ -236,10 +236,12 @@ using write-with-response (the `web/improv-test/` page is the seed of that).
 - **Onboard LED is on the CYW43 chip, not a GPIO.** Drive it via `control.gpio_set(0, on).await` —
   and it's **unavailable until cyw43 is initialized** (a real difference from the ESP's GPIO8 LED;
   the whole WS2812 / GPIO8 saga is moot). No "hold a pin low" needed.
-- **Factory reset (BOOT-hold):** the Pico has no BOOT GPIO. embassy-rp exposes
-  `embassy_rp::bootsel::is_bootsel_pressed()` — readable at runtime (it briefly drives QSPI/CS to
-  sense it). Idiomatic drop-in for our 3-s-hold reset, no extra hardware. Don't poll it concurrently
-  with flash writes. (External GPIO button is the alternative — Decision 3.)
+- **Factory reset (BOOT-hold): DEFERRED.** `embassy_rp::bootsel::is_bootsel_pressed()` exists but is
+  **gated to `rp2040`** in embassy-rp 0.10 — the RP2350 BOOTSEL read (different QMI/XIP path) isn't
+  wrapped yet, so the planned 3-s-hold reset can't use it. The boot state machine **auto-recovers**
+  instead: stored creds that fail to connect fall through to Improv setup (covers a changed network).
+  Interim forced reset: erase the creds region in BOOTSEL mode — `picotool erase -r 0x103FC000
+  0x10400000`. A real button (hand-rolled RP2350 BOOTSEL read, or an external GPIO) is a follow-up.
 - **Flash region for creds:** no esp-idf partition table. Reserve a few 4 KB sectors at the **top of
   flash** (e.g. last 64–128 KB), kept out of `memory.x`'s `FLASH` length so the linker never places
   code there; pass that offset range to `sequential-storage`. `embassy_rp::flash::Flash` implements
@@ -286,7 +288,11 @@ plan.
      `web/improv-test/` client; no firmware change. Persistence stubbed (storage = M4).
 3. **Spike Risk 1** — minimal PIO+DMA HUB75 driver lighting the 64×64 panel with a test pattern
    (port the PIO program; prove DMA chain + BCM). The riskiest *build*.
-4. **Port `storage.rs`** — swap flash handle, fixed offset. Smallest, self-contained; do it early.
+4. **Port `storage.rs`** ✅ *(done)* — sequential-storage over embassy-rp flash at a fixed top-of-flash
+   region (16 KiB reserved in memory.x); `net.rs` extracted as the shared join+DHCP helper; boot
+   state machine + persist-on-provision wired into `main.rs`/`improv.rs`. Verified on hardware:
+   provisions, persists, and **rejoins from flash after a power-cycle**. Factory-reset button
+   deferred (see *Smaller platform changes*).
 6. **Port `net.rs`** — cyw43 `Control`/`NetDriver` behind the same `start`/`connect` API.
 7. **Port `improv.rs`** — swap the BLE controller; trouble 0.6→0.7 API touch-ups.
 8. **Port `display.rs`** — wrap the Risk-1 driver in the existing refresh/draw task pair + `Screen`.
@@ -303,8 +309,9 @@ plan.
    from the first instruction, and early-boot/panic visibility.
 2. **Logging — USB-serial.** `embassy-usb-logger`, keeps the `log::info!` API over USB-CDC on the
    same cable. No defmt. Caveat: a panic before USB enumerates is invisible (no-probe limitation).
-3. **Factory-reset button — BOOTSEL.** `embassy_rp::bootsel::is_bootsel_pressed()`, ~3-s hold; no
-   extra hardware.
+3. **Factory-reset button — BOOTSEL, but DEFERRED.** Intended `is_bootsel_pressed()` (~3-s hold, no
+   extra hardware), but it's RP2040-only in embassy-rp 0.10 (see *Smaller platform changes*); the
+   boot path's auto-recovery covers the common case meanwhile.
 4. **Cutover — in place.** The ESP32 firmware is replaced in `firmware/`, not kept building in
    parallel. The full ESP32 tree is preserved at git tag **`esp32-final`** (port references pull
    from there, e.g. `git show esp32-final:firmware/src/improv.rs`).

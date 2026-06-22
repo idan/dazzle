@@ -57,6 +57,11 @@ embassy-usb        = "0.6.0"
 embassy-usb-logger = "0.6.0"
 log                = "0.4"
 
+# Persistent Wi-Fi credentials: sequential-storage (CRC + power-fail safe) over embassy-rp's flash,
+# in a region reserved at the top of flash (see memory.x). BlockingAsync adapts the blocking flash.
+sequential-storage   = "7"
+embassy-embedded-hal = "0.6.0"
+
 cortex-m-rt = "0.7"
 static_cell = "2.1"
 

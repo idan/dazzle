@@ -1,11 +1,11 @@
 //! pixel64 — RP2350 / Pico 2 W.
 //!
-//! Bring-up milestone 2c: Improv-over-BLE Wi-Fi provisioning on the cyw43 radio — the concurrency
-//! spike. Brings up cyw43 (Wi-Fi + BT) and the embassy-net stack, then runs Improv setup: advertise
-//! the Improv GATT as `pixel64`, accept a browser, and join Wi-Fi **while the BLE link is up**,
-//! reporting status + the device IP back over BLE. Provision from Chrome / https://improv-wifi.com
-//! (Android works; macOS is the open question this milestone re-tests). Persistence is stubbed here
-//! — storage is M4. See docs/pico-port.md.
+//! Boot: bring up cyw43 (Wi-Fi + BT) and the embassy-net stack, then either rejoin a stored Wi-Fi
+//! network directly, or — with no stored credentials — run Improv-over-BLE setup: advertise the
+//! Improv GATT as `pixel64`, take credentials from a browser, join Wi-Fi while the BLE link is up,
+//! persist them to flash, and report the IP back over BLE. Stored credentials that fail to connect
+//! fall back to setup. Provision from Chrome or the `web/improv-test/` client (Android + macOS).
+//! See docs/pico-port.md.
 
 #![no_std]
 #![no_main]
@@ -21,8 +21,11 @@ use embassy_rp::peripherals::{DMA_CH0, PIO0, USB};
 use embassy_rp::pio::{InterruptHandler as PioInterruptHandler, Pio};
 use embassy_rp::usb::{Driver, InterruptHandler as UsbInterruptHandler};
 use embassy_time::Timer;
-use log::info;
+use log::{info, warn};
 use static_cell::StaticCell;
+
+use pixel64::net;
+use pixel64::storage::CredStore;
 
 use pixel64::improv;
 
@@ -126,18 +129,40 @@ async fn main(spawner: Spawner) {
     );
     spawner.spawn(net_task(net_runner).unwrap());
 
-    // Improv setup: advertise over BLE, provision from a browser, join Wi-Fi while the BLE link is
-    // up, and come back with the assigned IP.
-    info!("pixel64: entering Improv setup — provision from Chrome / https://improv-wifi.com");
-    let ip = improv::run_setup(bt_device, &mut control, stack).await;
+    // Persistent credential store (top of flash).
+    let mut store = CredStore::new(p.FLASH);
+
+    // Boot state machine: stored creds → rejoin directly; otherwise Improv setup over BLE.
+    let ip = match store.load().await {
+        Some(creds) => {
+            info!("pixel64: stored credentials for '{}' — connecting", creds.ssid);
+            match net::connect(&mut control, stack, &creds.ssid, &creds.password).await {
+                Ok(ip) => ip,
+                Err(()) => {
+                    warn!("pixel64: stored credentials failed — entering Improv setup");
+                    improv::run_setup(bt_device, &mut control, stack, &mut store).await
+                }
+            }
+        }
+        None => {
+            info!("pixel64: no stored credentials — entering Improv setup (provision via Chrome)");
+            improv::run_setup(bt_device, &mut control, stack, &mut store).await
+        }
+    };
 
     info!("pixel64: ONLINE — ip = {}", ip);
     control.gpio_set(0, true).await; // solid onboard LED = online
 
+    // NOTE: explicit factory reset (wipe creds on a button hold) is deferred — embassy-rp 0.10 gates
+    // `bootsel` to RP2040, and the RP2350 BOOTSEL read isn't wrapped yet. The boot state machine
+    // already auto-recovers (stored creds that fail to connect fall through to Improv setup), which
+    // covers a changed/unreachable network. A forced re-provision (BOOTSEL or an external button)
+    // calling store.clear() is a follow-up — `store` stays live (main never returns). See
+    // docs/pico-port.md.
     let mut tick: u32 = 0;
     loop {
         info!("pixel64: online at {} — tick {}", ip, tick);
         tick = tick.wrapping_add(1);
-        Timer::after_secs(5).await;
+        Timer::after_secs(30).await;
     }
 }

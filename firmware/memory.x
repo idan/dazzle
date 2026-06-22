@@ -1,12 +1,11 @@
 MEMORY {
     /*
-     * RP2350 external QSPI flash. The Pico 2 W has 4 MiB.
-     *
-     * NOTE: when storage.rs is ported, the Wi-Fi credentials region will be carved out of the
-     * TOP of this space (reserve the last few 4 KiB sectors by shortening LENGTH, and point
-     * sequential-storage at that absolute offset). See docs/pico-port.md (storage milestone).
+     * RP2350 external QSPI flash. The Pico 2 W has 4 MiB, but we reserve the TOP 16 KiB (4 erase
+     * sectors) for the Wi-Fi credentials store so the linker never places code/data there.
+     * src/storage.rs points sequential-storage at that region: flash-relative 0x3FC000..0x400000.
+     * KEEP IN SYNC with CREDS_LEN in src/storage.rs (4096K - 16K = 4080K).
      */
-    FLASH : ORIGIN = 0x10000000, LENGTH = 4096K
+    FLASH : ORIGIN = 0x10000000, LENGTH = 4080K
     /*
      * RAM consists of 8 banks, SRAM0-SRAM7, with a striped mapping.
      * This is usually good for performance, as it distributes load on
