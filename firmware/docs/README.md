@@ -31,7 +31,8 @@ ESP32-C6 (the original tree is preserved at git tag `esp32-final`).
 - ✅ Boot state machine: stored creds → reconnect; otherwise Improv setup. Auto-recovers if a stored
   network fails; bad creds fail fast (length-validated + join timeout), never hang.
 - ✅ Factory reset: hold **BOOTSEL ~3 s** while running → wipe creds, reboot to setup.
-- ⏳ Open (polish): BCM color-depth tuning (smooth gradients); the `web/` app scaffold.
+- ⏳ Open (polish): BCM color-depth tuning (smooth gradients); building out the `web/` app
+  (scaffolded; UI/backend TBD).
 
 ## Hardware
 

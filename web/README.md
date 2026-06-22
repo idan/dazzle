@@ -1,9 +1,27 @@
 # web/
 
-The cloud backend + web UI for pixel64. The full app (Svelte 5 / SvelteKit on Cloudflare, tooled
-with Bun) is **not scaffolded yet** — see the repo root `CLAUDE.md`.
+The cloud backend + web UI for pixel64 — a **SvelteKit** app on **Cloudflare** (Workers adapter,
+D1 + Drizzle), tooled with **Bun**. The app itself is freshly scaffolded (default `sv` template so
+far); the bespoke piece today is the Improv BLE provisioning test client under `improv-test/`.
 
-What's here today:
+## Develop
+
+```sh
+bun install
+bun run dev          # dev server (append -- --open to launch a browser)
+bun run build        # production build
+bun run preview      # preview the production build
+```
+
+See `package.json` for the full script list and `wrangler.jsonc` for the Cloudflare config. To
+recreate the scaffold from scratch:
+
+```sh
+bun x sv@0.16.1 create --template minimal --types ts \
+  --add prettier vitest="usages:unit,component" tailwindcss="plugins:typography,forms" \
+  sveltekit-adapter="adapter:cloudflare+cfTarget:workers" drizzle="database:d1" eslint \
+  --install bun web
+```
 
 ## `improv-test/` — Improv-over-BLE provisioning test client
 
@@ -20,7 +38,6 @@ Web Bluetooth only works in a **secure context** — `http://localhost` or HTTPS
 **Chrome/Edge** (desktop or Android; not Safari/iOS). Serve the folder over localhost:
 
 ```sh
-# Bun (the project's tooling):
 bunx serve web/improv-test
 # …or anything else that serves static files on localhost:
 cd web/improv-test && python3 -m http.server 8000

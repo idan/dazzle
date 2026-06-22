@@ -4,9 +4,9 @@ Monorepo for an internet-connected **64×64 HUB75 LED pixel display**:
 
 - **`firmware/`** — the device: a **Raspberry Pi Pico 2 W (RP2350)** driving a **Waveshare P3 64×64
   HUB75** panel, in **Rust (embassy-rp, no_std)**. All Cargo/build/docs for the device live here.
-- **`web/`** — the cloud backend + web UI: **Svelte 5 / SvelteKit on Cloudflare**, tooled with
-  **Bun**. Only `web/improv-test/` exists so far (a zero-build Web Bluetooth provisioning test
-  client); the app proper isn't scaffolded yet.
+- **`web/`** — the cloud backend + web UI: **Svelte 5 / SvelteKit on Cloudflare** (Workers + D1 +
+  Drizzle), tooled with **Bun**. The app is scaffolded (default `sv` template); the bespoke piece so
+  far is `web/improv-test/`, a zero-build Web Bluetooth provisioning test client.
 
 Repo root holds only shared bits (this file, `.claude/`, `.gitignore`). **Run firmware commands from
 `firmware/`** (e.g. `cd firmware && cargo run`).
@@ -28,7 +28,7 @@ tag **`esp32-final`**; the migration story and the verified dependency set live 
   running = factory reset (wipe creds, reboot to setup). Bad creds fail fast (length-validated +
   join timeout) with a `FAILED` screen — never a hang.
 - ⏳ **Open (polish, non-blocking)** — BCM color-depth tuning for smooth gradients (solid-color text
-  is fine); the full `web/` app scaffold.
+  is fine); building out the `web/` app (scaffolded; UI/backend still TBD).
 
 ## Read before working
 
