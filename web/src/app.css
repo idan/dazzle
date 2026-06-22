@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
 
 /* Project palette, exposed as Tailwind color utilities (bg-bg, text-muted, …)
    and as CSS vars for hand-written component styles. */
