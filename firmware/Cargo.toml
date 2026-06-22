@@ -28,6 +28,13 @@ embassy-time     = "0.5.1"
 cyw43     = { version = "0.7.0", features = ["bluetooth"] }
 cyw43-pio = "0.10.0"
 
+# HUB75 LED-matrix driver — custom PIO+DMA driver (src/hub75.rs), ported from kjagiello/hub75-pio.
+# pio/pio-proc assemble the 3 PIO programs; fixed is the clock-divider type; embedded-graphics is
+# the DrawTarget. (pio/pio-proc 0.3 are already in the tree via cyw43-pio.)
+pio               = "0.3"
+fixed             = "1"
+embedded-graphics = "0.8"
+
 # IP stack for the Wi-Fi station (DHCP to confirm a working connection + obtain the IP).
 embassy-net = { version = "0.9.1", features = ["dhcpv4", "medium-ethernet"] }
 
