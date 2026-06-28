@@ -69,7 +69,17 @@ upgrade-evaluation recipe in [pico-port.md](pico-port.md).
 - **cyw43 owns PIO0 + DMA_CH0/CH1.** HUB75 uses **PIO1 + DMA_CH2–CH5**. The onboard LED is on the
   cyw43 chip (`control.gpio_set(0, …)`), available only after cyw43 init — not a GPIO.
 
-## BLE / Improv subtleties (cyw43 + trouble-host 0.6)
+## Scene rendering (shader VM)
+
+- **Never feed an unbounded monotonic clock into an `f32`.** The animation time uniform `t` was
+  `start.elapsed().as_micros() as f32 / 1e6`. An `f32` has a 24-bit mantissa, so its step size (ulp)
+  doubles each time the value crosses a power of two: after ~4 days `t` only resolves to ~33 ms, after
+  ~16 days to ~130 ms. Once the ulp exceeds the per-frame delta, `t` stops changing between frames and
+  the VM emits the *same* image repeatedly — the panel visibly drops toward a few fps while the logged
+  `render … us` stays put (compute is unchanged), and a power cycle "fixes" it by resetting `t` to ~0.
+  Fix: wrap the integer micros into a bounded window **before** the cast (`bin/scene.rs`, `WRAP_US`);
+  pick a window that's a whole multiple of the scene's longest period so the wrap is seamless. The same
+  trap applies to `frame as f32` (loses integer precision past 2²⁴) for any scene that animates on it.
 
 - **⚠️ cyw43 BLE byte-1 corruption.** GATT-write values occasionally arrive with **byte index 1
   decremented by one** — reproducible, intermittent, and *masked by logging latency* (a timing race

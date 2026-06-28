@@ -99,12 +99,20 @@ async fn main(spawner: Spawner) {
     }
     let blit_us = t_blit.elapsed().as_micros();
 
+    // Wrap elapsed time into a bounded window before the f32 cast. An unbounded f32 clock loses
+    // sub-frame precision as it grows: its ulp eventually exceeds the per-frame delta, so after days
+    // `t` stops changing between frames and the animation stutters toward a few fps — render time is
+    // unaffected, only the visible update rate collapses, and a power cycle "fixes" it. See
+    // docs/gotchas.md. 20π s is an exact multiple of every DEMO term's period (rates 1.0/0.7/1.3 →
+    // period 2π/rate), so the wrap is seamless for this scene.
+    const WRAP_US: u64 = 62_831_853; // ≈ 20π s
     let start = Instant::now();
     let mut frame: u32 = 0;
     let mut render_us_accum: u64 = 0;
     loop {
-        // Real-time clock so animation speed is independent of render/frame rate.
-        let t = start.elapsed().as_micros() as f32 / 1_000_000.0;
+        // Real-time clock so animation speed is independent of render/frame rate. Wrapped (WRAP_US)
+        // so the f32 keeps sub-frame precision indefinitely.
+        let t = (start.elapsed().as_micros() % WRAP_US) as f32 / 1_000_000.0;
 
         let t0 = Instant::now();
         scene::render(&mut display, &scene::DEMO, t, frame, EVAL_RES);
