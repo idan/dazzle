@@ -80,7 +80,7 @@ we later add a debug probe; the no-probe flow doesn't use them.
 Everything else: **GP0–GP22, GP26, GP27, GP28** — 26 GPIOs, far more than the 14 HUB75 needs
 (6 RGB + 5 address + CLK + LAT + OE). The constraint isn't *count*, it's *arrangement*: the PIO
 `out` instruction shifts to **consecutive** pins, so the 6 RGB data lines (and ideally CLK) want a
-contiguous block. The actual assignment gets designed at the HUB75 spike with that in mind, then
-written into [hardware-wiring.md](hardware-wiring.md) — **don't rewire from the ESP32 GPIO numbers
-until then.** Level-shifting (74AHCT245, 3.3 V → 5 V) and panel power are unchanged from the ESP
-build; see [hardware-wiring.md](hardware-wiring.md).
+contiguous block. The actual assignment was designed at the HUB75 spike with that in mind and now
+lives in [hardware-wiring.md](hardware-wiring.md) — **use that map, not the old ESP32 GPIO numbers.**
+Level-shifting (74AHCT245, 3.3 V → 5 V) and panel power are unchanged from the ESP build; see
+[hardware-wiring.md](hardware-wiring.md).
