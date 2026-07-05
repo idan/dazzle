@@ -1,8 +1,8 @@
-//! pixel64 — RP2350 / Pico 2 W.
+//! dazzle — RP2350 / Pico 2 W.
 //!
 //! Boot: bring up cyw43 (Wi-Fi + BT) and the embassy-net stack, then either rejoin a stored Wi-Fi
 //! network directly, or — with no stored credentials — run Improv-over-BLE setup: advertise the
-//! Improv GATT as `pixel64`, take credentials from a browser, join Wi-Fi while the BLE link is up,
+//! Improv GATT as `dazzle`, take credentials from a browser, join Wi-Fi while the BLE link is up,
 //! persist them to flash, and report the IP back over BLE. Stored credentials that fail to connect
 //! fall back to setup. Provision from Chrome or the `web/improv-test/` client (Android + macOS).
 //! See docs/pico-port.md.
@@ -25,19 +25,19 @@ use heapless::String;
 use log::{info, warn};
 use static_cell::StaticCell;
 
-use pixel64::bootsel;
-use pixel64::display::{self, Screen};
-use pixel64::hub75::{Display, DisplayMemory, Hub75Dma, Hub75Pins};
-use pixel64::improv;
-use pixel64::net;
-use pixel64::storage::CredStore;
+use dazzle::bootsel;
+use dazzle::display::{self, Screen};
+use dazzle::hub75::{Display, DisplayMemory, Hub75Dma, Hub75Pins};
+use dazzle::improv;
+use dazzle::net;
+use dazzle::storage::CredStore;
 
 // Program metadata for `picotool info`. The embassy-rp `binary-info` feature emits the RP2350 boot
 // image-def block (.start_block) on its own, so no manual `ImageDef` is needed.
 #[unsafe(link_section = ".bi_entries")]
 #[used]
 pub static PICOTOOL_ENTRIES: [embassy_rp::binary_info::EntryAddr; 3] = [
-    embassy_rp::binary_info::rp_program_name!(c"pixel64"),
+    embassy_rp::binary_info::rp_program_name!(c"dazzle"),
     embassy_rp::binary_info::rp_cargo_version!(),
     embassy_rp::binary_info::rp_program_build_attribute!(),
 ];
@@ -120,7 +120,7 @@ async fn main(spawner: Spawner) {
     display::start(panel, spawner);
     display::set_screen(Screen::Booting);
 
-    info!("pixel64: bringing up cyw43 radio (Wi-Fi + BT)…");
+    info!("dazzle: bringing up cyw43 radio (Wi-Fi + BT)…");
 
     // cyw43 firmware blobs (vendored). `fw`/`btfw`/`nvram` need 4-byte alignment (aligned_bytes!);
     // `clm` is passed to control.init() as a plain slice. `btfw` is the Bluetooth firmware.
@@ -156,7 +156,7 @@ async fn main(spawner: Spawner) {
         cyw43::new_with_bluetooth(state, pwr, spi, fw, btfw, nvram).await;
     spawner.spawn(cyw43_task(runner).unwrap());
     control.init(clm).await;
-    info!("pixel64: cyw43 up");
+    info!("dazzle: cyw43 up");
 
     // IP stack (DHCP) over the cyw43 network device — ready for the join during provisioning.
     let seed = RoscRng.next_u64();
@@ -175,27 +175,27 @@ async fn main(spawner: Spawner) {
     // Boot state machine: stored creds → rejoin directly; otherwise Improv setup over BLE.
     let ip = match store.load().await {
         Some(creds) => {
-            info!("pixel64: stored credentials for '{}' — connecting", creds.ssid);
+            info!("dazzle: stored credentials for '{}' — connecting", creds.ssid);
             let mut showing: String<32> = String::new();
             let _ = showing.push_str(&creds.ssid);
             display::set_screen(Screen::Connecting(showing));
             match net::connect(&mut control, stack, &creds.ssid, &creds.password).await {
                 Ok(ip) => ip,
                 Err(()) => {
-                    warn!("pixel64: stored credentials failed — entering Improv setup");
+                    warn!("dazzle: stored credentials failed — entering Improv setup");
                     display::set_screen(Screen::Setup);
                     improv::run_setup(bt_device, &mut control, stack, &mut store).await
                 }
             }
         }
         None => {
-            info!("pixel64: no stored credentials — entering Improv setup (provision via Chrome)");
+            info!("dazzle: no stored credentials — entering Improv setup (provision via Chrome)");
             display::set_screen(Screen::Setup);
             improv::run_setup(bt_device, &mut control, stack, &mut store).await
         }
     };
 
-    info!("pixel64: ONLINE — ip = {}", ip);
+    info!("dazzle: ONLINE — ip = {}", ip);
     display::set_screen(Screen::Online(ip));
     control.gpio_set(0, true).await; // solid onboard LED = online
 
@@ -209,7 +209,7 @@ async fn main(spawner: Spawner) {
         if bootsel::is_bootsel_pressed(bootsel_pin.reborrow()) {
             held_ms += 100;
             if held_ms >= 3000 {
-                warn!("pixel64: BOOTSEL held — wiping Wi-Fi credentials; release to reboot");
+                warn!("dazzle: BOOTSEL held — wiping Wi-Fi credentials; release to reboot");
                 let _ = store.clear().await;
                 while bootsel::is_bootsel_pressed(bootsel_pin.reborrow()) {
                     Timer::after_millis(50).await;

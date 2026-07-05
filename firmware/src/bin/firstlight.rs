@@ -25,7 +25,7 @@ use log::info;
 #[unsafe(link_section = ".bi_entries")]
 #[used]
 pub static PICOTOOL_ENTRIES: [embassy_rp::binary_info::EntryAddr; 2] = [
-    embassy_rp::binary_info::rp_program_name!(c"pixel64-firstlight"),
+    embassy_rp::binary_info::rp_program_name!(c"dazzle-firstlight"),
     embassy_rp::binary_info::rp_program_build_attribute!(),
 ];
 

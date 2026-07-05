@@ -7,8 +7,8 @@ over Bluetooth LE, on the Pico 2 W's CYW43439 radio (`cyw43` + `trouble-host`).
 ## How to provision
 
 1. Power on a device with no stored credentials → the panel shows **SETUP** and it advertises
-   over BLE as **`pixel64`**.
-2. In a supported browser, open an Improv web client → **Connect** → pick **`pixel64`** in the
+   over BLE as **`dazzle`**.
+2. In a supported browser, open an Improv web client → **Connect** → pick **`dazzle`** in the
    Bluetooth picker. (Use `web/improv-test/` or [improv-wifi.com](https://www.improv-wifi.com/ble/) —
    see the macOS note below.)
 3. Enter your home SSID + password → **Submit**.
@@ -43,7 +43,7 @@ can A/B the bug). If `improv-wifi.com` still fails on macOS, clear its cached PW
 boot ─► panel: Booting ─► load creds from flash
          │ found                    │ none
          ▼                          ▼
-   Wi-Fi connect ──fail──────►  SETUP MODE (panel: SETUP; BLE advertise "pixel64")
+   Wi-Fi connect ──fail──────►  SETUP MODE (panel: SETUP; BLE advertise "dazzle")
          │ ok                         on Improv "send Wi-Fi" RPC (auto-authorized):
          ▼                              control.join() + DHCP, persist, report IP over BLE
    ONLINE (panel: IP)                  └─ success ─► ONLINE

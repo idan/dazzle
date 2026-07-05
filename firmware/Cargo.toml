@@ -1,12 +1,12 @@
 [package]
 edition      = "2024"
-name         = "pixel64"
+name         = "dazzle"
 rust-version = "1.88"
 version      = "0.1.0"
-default-run  = "pixel64"  # `cargo run` flashes the firmware; diagnostics are --bin firstlight/hub75test
+default-run  = "dazzle"  # `cargo run` flashes the firmware; diagnostics are --bin firstlight/hub75test
 
 [[bin]]
-name = "pixel64"
+name = "dazzle"
 path = "./src/bin/main.rs"
 
 # Target: Raspberry Pi Pico 2 W (RP2350A, ARM Cortex-M33) on embassy-rp.
@@ -40,7 +40,7 @@ libm              = "0.2"
 
 # Shared scene renderer (shader-bytecode VM). `default-features = false` selects the no_std, no-heap
 # core (no wasm-bindgen) — the same VM the web preview runs, so device output matches by construction.
-pixel64-renderer  = { path = "../renderer", default-features = false }
+dazzle-renderer  = { path = "../renderer", default-features = false }
 
 # IP stack for the Wi-Fi station (DHCP to confirm a working connection + obtain the IP).
 embassy-net = { version = "0.9.1", features = ["dhcpv4", "medium-ethernet"] }
@@ -87,12 +87,12 @@ opt-level = "s"
 
 # The shader VM is a hot per-pixel interpreter — always build it for speed (no bounds/overflow checks,
 # full opt) even in dev, so `cargo run --bin scene` is usable. Size is a non-issue for one small crate.
-[profile.dev.package.pixel64-renderer]
+[profile.dev.package.dazzle-renderer]
 opt-level = 3
 debug-assertions = false
 overflow-checks = false
 
-[profile.release.package.pixel64-renderer]
+[profile.release.package.dazzle-renderer]
 opt-level = 3
 
 [profile.release]

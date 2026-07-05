@@ -84,7 +84,7 @@ renderer at `opt=3`:
 Findings:
 
 - **Build it optimized.** `cargo run` (dev: `opt="s"` + debug/overflow checks) gave ~347 ms/frame.
-  A profile override builds `pixel64-renderer` at `opt=3` always (firmware/Cargo.toml); run `--release`
+  A profile override builds `dazzle-renderer` at `opt=3` always (firmware/Cargo.toml); run `--release`
   so the firmware crate (the `set_pixel` blit) is fast too.
 - **`sin` was the killer.** `libm::sinf` reduces in `f64`; the M33 FPU is single-precision, so it was
   software-emulated (~3,000 cyc/call) — the bulk of the original 280 ms. Replaced with a pure-`f32`

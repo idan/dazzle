@@ -1,8 +1,8 @@
 [package]
-name = "pixel64-renderer"
+name = "dazzle-renderer"
 version = "0.0.0"
 edition = "2021"
-description = "Shared scene renderer (shader VM + compositor) for pixel64 — compiles to wasm32 (web preview) and the device target."
+description = "Shared scene renderer (shader VM + compositor) for dazzle — compiles to wasm32 (web preview) and the device target."
 
 [lib]
 # cdylib for the wasm build; rlib so the firmware can depend on it (it does — firmware/src/scene.rs).

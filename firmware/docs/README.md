@@ -1,4 +1,4 @@
-# pixel64 documentation
+# dazzle documentation
 
 Driving a **Waveshare RGB-Matrix-P3 64×64** LED panel from a **Raspberry Pi Pico 2 W (RP2350)** in
 Rust (**embassy-rp**, no_std): a custom **HUB75 PIO+DMA** display driver, **Improv-over-BLE** Wi-Fi

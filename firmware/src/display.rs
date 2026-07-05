@@ -80,7 +80,7 @@ fn line(d: &mut Display, text: &str, y: i32, color: Rgb888) {
 
 fn render(d: &mut Display, screen: &Screen) {
     match screen {
-        Screen::Booting => line(d, "pixel64", 36, Rgb888::YELLOW),
+        Screen::Booting => line(d, "dazzle", 36, Rgb888::YELLOW),
         Screen::Connecting(ssid) => {
             line(d, "Wi-Fi", 18, Rgb888::CYAN);
             line(d, "joining", 32, Rgb888::WHITE);
@@ -90,7 +90,7 @@ fn render(d: &mut Display, screen: &Screen) {
             line(d, "SETUP", 14, Rgb888::YELLOW);
             line(d, "Chrome:", 30, Rgb888::WHITE);
             line(d, "improv", 42, Rgb888::CYAN);
-            line(d, "pixel64", 56, Rgb888::CYAN);
+            line(d, "dazzle", 56, Rgb888::CYAN);
         }
         Screen::Online(ip) => {
             line(d, "ONLINE", 22, Rgb888::GREEN);

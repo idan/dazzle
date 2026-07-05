@@ -1,4 +1,4 @@
-//! Scene VM demo — runs the shared renderer (`pixel64-renderer`) on the RP2350 and animates the
+//! Scene VM demo — runs the shared renderer (`dazzle-renderer`) on the RP2350 and animates the
 //! panel with an embedded scene. Proves the shader-bytecode VM executes on-device and drives the
 //! HUB75 driver; logs the measured per-frame render time so we know the on-device compute budget.
 //!
@@ -18,8 +18,8 @@ use static_cell::StaticCell;
 
 use embedded_graphics::pixelcolor::Rgb888;
 
-use pixel64::hub75::{self, Display, DisplayMemory, Hub75Dma, Hub75Pins};
-use pixel64::scene;
+use dazzle::hub75::{self, Display, DisplayMemory, Hub75Dma, Hub75Pins};
+use dazzle::scene;
 
 /// Shader eval resolution (≤ 64, must divide 64). 64 = full panel; 32 = ¼ the per-pixel VM work,
 /// nearest-upscaled. Lower this to trade spatial detail for fps. (The VM dominates frame time, so
@@ -29,7 +29,7 @@ const EVAL_RES: usize = 32;
 #[unsafe(link_section = ".bi_entries")]
 #[used]
 pub static PICOTOOL_ENTRIES: [embassy_rp::binary_info::EntryAddr; 2] = [
-    embassy_rp::binary_info::rp_program_name!(c"pixel64-scene"),
+    embassy_rp::binary_info::rp_program_name!(c"dazzle-scene"),
     embassy_rp::binary_info::rp_program_build_attribute!(),
 ];
 

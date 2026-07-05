@@ -8,7 +8,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>pixel64 — scene editor</title>
+	<title>dazzle — scene editor</title>
 </svelte:head>
 
 <Tooltip.Provider delayDuration={200}>

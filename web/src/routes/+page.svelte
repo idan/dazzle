@@ -168,7 +168,7 @@
 
 <div class="app">
 	<header>
-		<div class="brand">pixel64 <span class="sub">scene editor</span></div>
+		<div class="brand">dazzle <span class="sub">scene editor</span></div>
 		<div class="spacer"></div>
 		<div class="field">
 			example

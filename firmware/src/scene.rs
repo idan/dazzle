@@ -1,4 +1,4 @@
-//! On-device scene rendering — runs the shared shader VM (`pixel64-renderer`) onto the HUB75 panel.
+//! On-device scene rendering — runs the shared shader VM (`dazzle-renderer`) onto the HUB75 panel.
 //!
 //! MVP: one **embedded** example scene (an animated RGB plasma) rendered straight to the driver, to
 //! prove the shared VM executes on the RP2350 and animates the panel. Each pixel's linear `0..1`
@@ -11,7 +11,7 @@
 //! This is the single-layer, single-scene floor those build on.
 
 use embedded_graphics::pixelcolor::Rgb888;
-use pixel64_renderer::{op, render_grid, to_u8, Stack};
+use dazzle_renderer::{op, render_grid, to_u8, Stack};
 
 use crate::hub75::{self, Display};
 

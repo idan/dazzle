@@ -1,4 +1,4 @@
-// baffle.scad — grid baffle for the pixel64 64x64 HUB75 LED panel
+// baffle.scad — grid baffle for the dazzle 64x64 HUB75 LED panel
 //
 // A grid of thin walls that sits between the LED panel and a diffuser sheet,
 // giving each of the 4096 pixels its own optical cell so light can't bleed

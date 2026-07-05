@@ -1,4 +1,4 @@
-//! pixel64 shared renderer.
+//! dazzle shared renderer.
 //!
 //! A shader-bytecode stack VM ([`vm`]) that renders a per-frame + per-pixel program across an
 //! eval-resolution grid. The **same crate runs in two places**, so the web preview matches the

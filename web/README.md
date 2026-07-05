@@ -1,4 +1,4 @@
-# web/ — pixel64 cloud + scene editor
+# web/ — dazzle cloud + scene editor
 
 The cloud backend + web UI: a **SvelteKit** app (Svelte 5) on **Cloudflare** (Workers adapter,
 D1 + Drizzle), tooled with **Bun**, ESLint/Prettier, and Vitest. The main feature today is a
@@ -108,7 +108,7 @@ bunx serve web/improv-test
 cd web/improv-test && python3 -m http.server 8000
 ```
 
-Then open the printed `http://localhost:<port>` in Chrome, **Connect to pixel64…**, enter Wi-Fi
+Then open the printed `http://localhost:<port>` in Chrome, **Connect to dazzle…**, enter Wi-Fi
 credentials, and **Send**. Watch `current_state` advance Provisioning → Provisioned and a device URL
 appear. The on-page log shows every notification and the exact bytes written.
 

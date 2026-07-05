@@ -1,6 +1,6 @@
 //! Improv Wi-Fi provisioning over BLE (https://www.improv-wifi.com/ble/), on the cyw43 radio.
 //!
-//! In setup mode the device advertises the Improv GATT service as `pixel64`. A browser
+//! In setup mode the device advertises the Improv GATT service as `dazzle`. A browser
 //! (Chrome/Edge on desktop or Android — not iOS, which lacks Web Bluetooth) connects and the user
 //! submits their home SSID/password. We auto-authorize (no physical button gate), then join Wi-Fi
 //! **while the BLE link stays up** (so we can report status), and return the assigned IP.
@@ -33,7 +33,7 @@ use crate::display::{self, Screen};
 use crate::net;
 use crate::storage::{CredStore, Credentials};
 
-pub const DEVICE_NAME: &str = "pixel64";
+pub const DEVICE_NAME: &str = "dazzle";
 
 /// The BLE controller type: cyw43's BT transport behind bt-hci's ExternalController.
 type BleController = ExternalController<BtDriver<'static>, 1>;

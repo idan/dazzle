@@ -33,12 +33,12 @@ use embedded_graphics::pixelcolor::Rgb888;
 use log::info;
 use static_cell::StaticCell;
 
-use pixel64::hub75::{self, Display, DisplayMemory, Hub75Dma, Hub75Pins, GAMMA};
+use dazzle::hub75::{self, Display, DisplayMemory, Hub75Dma, Hub75Pins, GAMMA};
 
 #[unsafe(link_section = ".bi_entries")]
 #[used]
 pub static PICOTOOL_ENTRIES: [embassy_rp::binary_info::EntryAddr; 2] = [
-    embassy_rp::binary_info::rp_program_name!(c"pixel64-calibrate"),
+    embassy_rp::binary_info::rp_program_name!(c"dazzle-calibrate"),
     embassy_rp::binary_info::rp_program_build_attribute!(),
 ];
 

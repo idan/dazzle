@@ -228,7 +228,7 @@ out, so its hardcoded `ACL_N=1` is never enforced). All consistent with the real
 the device entirely.
 
 **Caveat for end users:** any provisioning UI still shipping the pre-#217 Improv SDK will fail on
-macOS. The fix is to use an updated client — the pixel64 web app will host its own provisioning UI
+macOS. The fix is to use an updated client — the dazzle web app will host its own provisioning UI
 using write-with-response (the `web/improv-test/` page is the seed of that).
 
 ## Smaller platform changes
@@ -277,7 +277,7 @@ plan.
      `WIFI_PASS` compile-time env vars (Improv replaces this later).
    - **2b — BLE controller swap** ✅ *(done)* — `cyw43::new_with_bluetooth` (+ `bluetooth` feature +
      `43439A0_btfw.bin` blob) → `BtDriver` in trouble-host 0.6's `ExternalController`; advertises
-     `pixel64` with a battery service. Verified on hardware (nRF Connect connects + reads). Pairing
+     `dazzle` with a battery service. Verified on hardware (nRF Connect connects + reads). Pairing
      is cyw43 0.7 + trouble 0.6 on bt-hci 0.8 — see §"Dependency compatibility". The ESP `improv.rs`
      GATT patterns ported verbatim (still trouble 0.6).
    - **2c — Spike Risk 2 (concurrency)** ✅ *(done)* — Improv GATT ported (`src/improv.rs`); device

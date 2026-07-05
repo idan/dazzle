@@ -351,6 +351,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "dazzle"
+version = "0.1.0"
+dependencies = [
+ "cortex-m",
+ "cortex-m-rt",
+ "critical-section",
+ "cyw43",
+ "cyw43-pio",
+ "dazzle-renderer",
+ "embassy-embedded-hal",
+ "embassy-executor",
+ "embassy-futures",
+ "embassy-net",
+ "embassy-rp",
+ "embassy-sync 0.7.2",
+ "embassy-time",
+ "embassy-usb",
+ "embassy-usb-logger",
+ "embedded-graphics",
+ "fixed",
+ "heapless 0.9.3",
+ "libm",
+ "log",
+ "pio",
+ "sequential-storage",
+ "static_cell",
+ "trouble-host",
+]
+
+[[package]]
+name = "dazzle-renderer"
+version = "0.0.0"
+dependencies = [
+ "libm",
+]
+
+[[package]]
 name = "debug-helper"
 version = "0.3.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1305,43 +1342,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "pixel64"
-version = "0.1.0"
-dependencies = [
- "cortex-m",
- "cortex-m-rt",
- "critical-section",
- "cyw43",
- "cyw43-pio",
- "embassy-embedded-hal",
- "embassy-executor",
- "embassy-futures",
- "embassy-net",
- "embassy-rp",
- "embassy-sync 0.7.2",
- "embassy-time",
- "embassy-usb",
- "embassy-usb-logger",
- "embedded-graphics",
- "fixed",
- "heapless 0.9.3",
- "libm",
- "log",
- "pio",
- "pixel64-renderer",
- "sequential-storage",
- "static_cell",
- "trouble-host",
-]
-
-[[package]]
-name = "pixel64-renderer"
-version = "0.0.0"
-dependencies = [
- "libm",
 ]
 
 [[package]]

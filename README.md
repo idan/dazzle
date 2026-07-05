@@ -1,4 +1,4 @@
-# pixel64
+# dazzle
 
 An internet-connected **64×64 HUB75 LED pixel display**.
 
@@ -24,7 +24,7 @@ cargo run        # build, flash over USB, open the serial monitor
 ```
 
 On first boot the panel shows **SETUP**; provision Wi-Fi from **Chrome on Android / Windows / Linux /
-macOS** at <https://www.improv-wifi.com/ble/> → pick `pixel64`. (macOS works too now — see
+macOS** at <https://www.improv-wifi.com/ble/> → pick `dazzle`. (macOS works too now — see
 [firmware/docs/gotchas.md](firmware/docs/gotchas.md); a stale `improv-wifi.com` cache can still fail,
 so `web/improv-test/` is the known-good client.) Hold **BOOTSEL ~3 s** to factory-reset.
 

@@ -1,4 +1,4 @@
-# pixel64 — project context
+# dazzle — project context
 
 Monorepo for an internet-connected **64×64 HUB75 LED pixel display**:
 
